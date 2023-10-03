@@ -1,9 +1,14 @@
-import numpy as np
-import matplotlib.pyplot as plt
 import time
 
+import matplotlib.pyplot as plt
+import numpy as np
+
 from dice_game import DiceGame
-from abc import ABC, abstractmethod
+
+# 通过切换导入的 MyAgent 来完成不同策略的测试
+from agents.best_value_iteration import MyAgent
+
+# from agents.epsilon_greedy import MyAgent
 
 # 是否 Debug，是就输出调试信息
 DBG = True
@@ -12,15 +17,6 @@ DBG = True
 def log(msg):
     if DBG:
         print(msg)
-
-
-class DiceGameAgent(ABC):
-    def __init__(self, game):
-        self.game = game
-
-    @abstractmethod
-    def play(self, state):
-        pass
 
 
 def play_game_with_agent(agent, game, verbose=False):
@@ -56,81 +52,6 @@ def play_game_with_agent(agent, game, verbose=False):
         print(f"\nFinal dice: {state}, score: {game.score}")
 
     return game.score
-
-
-def get_next_states_cached(game, cache, action, state):
-    """
-    缓存 (action, state)，加速 get_next_states
-    :param game:
-    :param cache:
-    :param action:
-    :param state:
-    :return:
-    """
-    if (action, state) not in cache:
-        cache[(action, state)] = game.get_next_states(action, state)
-    return cache[(action, state)]
-
-
-class MyAgent(DiceGameAgent):
-    """
-    使用最佳价值迭代实现的 agent
-    """
-
-    def __init__(self, game, gamma=0.96, theta=0.1):
-        """Initializes the agent by performing a value iteration
-
-        After the value iteration is run an optimal policy is returned. This
-        policy instructs agent on what action to take in any possible state.
-        """
-        # this calls the superclass constructor (does self.game = game)
-        super().__init__(game)
-
-        # value iteration 最优价值迭代
-        local_cache = {}
-        v_arr = {}
-        policy = {}
-        for state in game.states:
-            v_arr[state] = 0
-            policy[state] = ()
-
-        delta_max = theta + 1  # initialize to be over theta treshold
-        while delta_max >= theta:
-            delta_max = 0
-            for state in game.states:
-                s_val = v_arr[state]
-                max_action = 0
-                for action in game.actions:
-                    s1_sum = 0
-                    # states, game_over, reward, probabilities = game.get_next_states(action, state)
-                    states, game_over, reward, probabilities = get_next_states_cached(game, local_cache, action, state)
-                    for s1, p1 in zip(states, probabilities):
-                        if not game_over:
-                            s1_sum += p1 * (reward + gamma * v_arr[s1])
-                        else:
-                            s1_sum += p1 * (reward + gamma * game.final_score(state))
-                    if s1_sum > max_action:
-                        max_action = s1_sum
-                        policy[state] = action
-                v_arr[state] = max_action
-                delta_max = max(delta_max, abs(s_val - v_arr[state]))
-
-        self._policy = policy
-
-    def play(self, state):
-        """
-        given a state, return the chosen action for this state
-        at minimum you must support the basic rules: three six-sided fair dice
-
-        if you want to support more rules, use the values inside self.game, e.g.
-            the input state will be one of self.game.states
-            you must return one of self.game.actions
-
-        read the code in dicegame.py to learn more
-        """
-        # YOUR CODE HERE
-
-        return self._policy[state]
 
 
 def stats(basic=True, extended=True):
@@ -176,7 +97,7 @@ def stats(basic=True, extended=True):
 
     if extended:
 
-        print("Testing extended rules – two three-sided dice.")
+        print("Testing extended rules - two three-sided dice.")
         print()
 
         scores = []
@@ -206,7 +127,7 @@ def stats(basic=True, extended=True):
         for s, t in zip(scores, times):
             print(round(s, 2), round(t, 2))
 
-        print("Testing extended rules – six six-sided dice.")
+        print("Testing extended rules - six six-sided dice.")
         print()
 
         scores = []
