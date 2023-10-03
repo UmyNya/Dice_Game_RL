@@ -54,11 +54,11 @@ def play_game_with_agent(agent, game, verbose=False):
     return game.score
 
 
-def stats(basic=True, extended=True):
+def stats(basic=True, extended=False):
     """
     统计
-    :param basic:
-    :param extended:
+    :param basic: bool 是否测试 3d6 场景
+    :param extended: bool 是否测试其他场景（2d3,6d6)
     :return:
     """
     if basic:
@@ -227,5 +227,5 @@ def hyper_tuning():
 
 
 if __name__ == "__main__":
-    stats(basic=True, extended=True)
+    stats(basic=True, extended=False)
     # hyper_tuning()
