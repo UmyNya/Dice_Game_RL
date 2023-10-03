@@ -14,40 +14,6 @@ The goal of this work is to write an agent that is able to play a game of dice a
 ![Dice](images/dice_pic.png "Average game score of 1000 games for different theta") 
 Image:  Diacritica [2] (Source: Wikipedia [1])
 
-## commit guidelines
-
-REF: [Commit message 和 Change log 编写指南 - 阮一峰](https://www.ruanyifeng.com/blog/2016/01/commit_message_change_log.html)
-
-```
-<type>(<scope>): <subject> # scope 选填，type 和 subject 必填。简单说明，不超过50个字
-# 空一行
-[optional body] # body 选填，用于填写更详细的描述
-# 空一行
-<footer> # 选填
-```
-
-> *# 主要type*
-> 
-> feat：新功能（feature）。
-> 
-> fix：修复bug，可以是QA发现的BUG，也可以是研发自己发现的BUG。
->
-> 
-> 
-> *# 特殊type*
-> 
-> docs：文档（documentation）。
-> 
-> style：格式（不影响代码运行的变动）。
-> 
-> refactor：重构（即不是新增功能，也不是修改bug的代码变动）。
-> 
-> perf：优化相关，比如提升性能、体验。
-> 
-> test：增加测试。
-> 
-> chore：构建过程或辅助工具的变动。
-
 ## Method
 
 Several iterations of the algorithm were implemented and the approach that proved to be the fastest and at the same time most successful is a value iteration approach that calculates an optimal policy for the agent using the Bellman optimality equation ([3]). It works for normal fair dice as well as modified ones with arbitrary number of sides. 
