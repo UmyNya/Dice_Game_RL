@@ -107,9 +107,10 @@ class DiceGame:
         count = len(hold)
         if count == self._dice:
             # 保留所有骰子的点数，游戏结束
+            dice_state = self.get_dice_state()
             self.flip_duplicates()
             self.score += np.sum(self._current_dice)
-            return np.sum(self._current_dice), self.get_dice_state(), True
+            return np.sum(self._current_dice), dice_state, True
         else:
             # 只保留一部分骰子的点数，剩下骰子重新投掷
             mask = np.ones(self._dice, dtype=bool)
@@ -138,12 +139,10 @@ class DiceGame:
         state = np.array(state)
         # 将 state 中重复的点数翻转
         uniques, counts = np.unique(state, return_counts=True)
-        print('uniques', uniques, 'counts', counts)
         if np.any(counts > 1):
             # \ 表示换行。这里是用 self._flip 中对应值（翻转的点数）替换重复的点数。
-            print('state[np.isin(state, uniques[counts > 1])]',state[np.isin(state, uniques[counts > 1])])
-            state[np.isin(state, uniques[counts > 1])] = \
-                [self._flip[x] for x in state[np.isin(state, uniques[counts > 1])]]
+            state[np.isin(state, uniques[counts > 1])] = [self._flip[x] for x in
+                                                          state[np.isin(state, uniques[counts > 1])]]
         return np.sum(state)
 
     def get_dice_state(self):
