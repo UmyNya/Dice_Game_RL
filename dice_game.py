@@ -54,7 +54,7 @@ class DiceGame:
 
         # 重置骰子
         # self.reset()
-        self._current_dice = np.zeros(self._dice, dtype=np.int_)
+        self._current_dice = np.zeros(self._dice, dtype=int)
         self.score = 0
         self._game_over = False
 
@@ -123,6 +123,28 @@ class DiceGame:
             # 得分减去重新投掷的惩罚
             self.score -= self._penalty
             return -1 * self._penalty, self.get_dice_state(), False
+
+    def get_state_score(self, state):
+        """
+        计算当前骰子点数（状态）下的分数。
+        :param state: tuple 骰子的点数（状态）。在 self.states 中选择
+        :param hold: tuple 选择要保留的点数。在 self.actions 中选择
+        :return: int 本轮得分
+        """
+        if state not in self.states:
+            raise ValueError("state must be a valid tuple of game state")
+
+        # 将 tuple 变成 np.array
+        state = np.array(state)
+        # 将 state 中重复的点数翻转
+        uniques, counts = np.unique(state, return_counts=True)
+        print('uniques', uniques, 'counts', counts)
+        if np.any(counts > 1):
+            # \ 表示换行。这里是用 self._flip 中对应值（翻转的点数）替换重复的点数。
+            print('state[np.isin(state, uniques[counts > 1])]',state[np.isin(state, uniques[counts > 1])])
+            state[np.isin(state, uniques[counts > 1])] = \
+                [self._flip[x] for x in state[np.isin(state, uniques[counts > 1])]]
+        return np.sum(state)
 
     def get_dice_state(self):
         return tuple(self._current_dice)
