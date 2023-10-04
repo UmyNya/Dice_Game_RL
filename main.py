@@ -3,12 +3,12 @@ import time
 import matplotlib.pyplot as plt
 import numpy as np
 
+from agents.dice_game_agent import play_game_with_agent
 from dice_game import DiceGame
 
 # 通过切换导入的 MyAgent 来完成不同策略的测试
 # from agents.best_value_iteration import MyAgent
 from agents.epsilon_mc import MyAgent
-
 
 # 是否 Debug，是就输出调试信息
 DBG = True
@@ -17,41 +17,6 @@ DBG = True
 def log(msg):
     if DBG:
         print(msg)
-
-
-def play_game_with_agent(agent, game, verbose=False):
-    """
-    :param agent:
-    :param game:
-    :param verbose: bool 是否输出详细信息（冗余信息）
-    :return:
-    """
-    state = game.reset()
-
-    if verbose:
-        print(f"Testing agent: \n\t{type(agent).__name__}")
-    if verbose:
-        print(f"Starting dice: \n\t{state}\n")
-
-    game_over = False
-
-    # agent 行动的计数器
-    actions = 0
-
-    while not game_over:
-        action = agent.play(state)
-        actions += 1
-
-        if verbose:
-            print(f"Action {actions}: \t{action}")
-        _, state, game_over = game.roll(action)
-        if verbose and not game_over:
-            print(f"Dice: \t\t{state}")
-
-    if verbose:
-        print(f"\nFinal dice: {state}, score: {game.score}")
-
-    return game.score
 
 
 def stats(basic=True, extended=False):
@@ -199,11 +164,9 @@ def hyper_tuning():
     for g, s, t in zip(test_theta, scores, times):
         print(round(g, 3), round(s, 3), round(t, 3))
 
-    print("10x20 -[gamma = {:0.3f}, theta = {:0.3f}] Overall AVG score {:0.3f} and AVG time {:0.3f}".format(g, t,
-                                                                                                            np.mean(
-                                                                                                                scores),
-                                                                                                            np.mean(
-                                                                                                                times)))
+    print(
+        "10x20 -[gamma = {:0.3f}, theta = {:0.3f}] Overall AVG score {:0.3f} and AVG time {:0.3f}".format(g, t, np.mean(
+            scores), np.mean(times)))
     # plt.plot(test_gamma, scores)
     # plt.xlabel('gamma')
     plt.plot(test_theta, scores)
