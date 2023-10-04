@@ -1,5 +1,5 @@
 """
-»ùÓÚ ¦Å ²ßÂÔµÄµÄÊ×´Î·ÃÎÊĞÍ MC ¿ØÖÆËã·¨
+åŸºäº Îµ ç­–ç•¥çš„çš„é¦–æ¬¡è®¿é—®å‹ MC æ§åˆ¶ç®—æ³•
 """
 import numpy as np
 import random
@@ -10,122 +10,175 @@ from dice_game import DiceGame
 
 class MyAgent(DiceGameAgent):
     """
-    Ê¹ÓÃ¦Å-Ì°ĞÄ²ßÂÔÊµÏÖµÄ agent
+    ä½¿ç”¨Îµ-è´ªå¿ƒç­–ç•¥å®ç°çš„ agent
     """
 
-    def __init__(self, game, gamma=0.96, theta=0.1):
+    def __init__(self, game, gamma=0.99, theta=0.5):
         """
-        ¦Å-Q Ñ§Ï°²ßÂÔ
+        Îµ-Q å­¦ä¹ ç­–ç•¥
         """
         # this calls the superclass constructor (does self.game = game)
         super().__init__(game)
 
-        # ======== ³õÊ¼»¯²ÎÊı=========
+        # ======== åˆå§‹åŒ–å‚æ•°=========
 
-        # ¦Å , ÊÔÌ½µÄ¸ÅÂÊ
-        self._epsilon = 0.5  # TODO£º¿ÉÒÔÓÅ»¯Îª»ºÂıÏÂ½µ/²¨¶¯
-
-        # ¶¯×÷µÄÊıÁ¿
+        # åŠ¨ä½œçš„æ•°é‡
         self._action_num = len(game.actions)
-        # ¶¯×÷µÄindex
+        # åŠ¨ä½œçš„index
         self._action_index = {action: index for action, index in zip(game.actions, range(0, self._action_num))}
 
-        # self._best_action[state] = µ±Ç° state ÏÂµÄ×î¼Ñ action
+        # è®¡ç®—åŠ¨ä½œæ¦‚ç‡çš„ç¼“å­˜
+        self._p_best = None
+        self._init_p_array = None
+        # Îµ , è¯•æ¢çš„æ¦‚ç‡
+        self._epsilon = 0  # TODOï¼šå¯ä»¥ä¼˜åŒ–ä¸ºç¼“æ…¢ä¸‹é™/æ³¢åŠ¨
+        self.update_epsilon(0.1)
+
+        # å½“å‰ state ä¸‹çš„æœ€ä½³ action = self._best_action[state]
         self._best_action = {}
-        # ¶¯×÷¼ÛÖµº¯Êı
-        # q_arr[state][0][self._action_index[action]] = ¶¯×÷µÄÆ½¾ù¼ÛÖµ
-        # q_arr[state][1][self._action_index[action]] = ¶¯×÷µÄÀÛ¼Æ´ÎÊı
+        # åŠ¨ä½œä»·å€¼å‡½æ•°
+        # åŠ¨ä½œçš„å¹³å‡ä»·å€¼ = q_arr[state][0][self._action_index[action]]
+        # åŠ¨ä½œçš„ç´¯è®¡æ¬¡æ•° = q_arr[state][1][self._action_index[action]]
         q_arr = {}
 
+        # TODO: ä¼˜åŒ–åˆå§‹å€¼
         for state in game.states:
-            self._best_action[state] = (0, 1, 2)  # TODO ¿ÉÒÔÓÅ»¯
-            q_arr[state] = [np.zeros(len(game.actions), dtype=float),
-                            np.zeros(len(game.actions), dtype=int)]  # TODO ¿ÉÒÔÓÅ»¯
+            # è®¡ç®—å½“å‰ state çš„ä¸´æ—¶åˆ†æ•°
+            score = self.game.get_state_score(state)
+            # åˆå§‹åŒ–æœ€ä¼˜åŠ¨ä½œ TODO
+            self._best_action = {(1, 1, 1): (0, 1, 2), (1, 1, 2): (0, 1), (1, 1, 3): (0, 1), (1, 1, 4): (0, 1, 2),
+                                 (1, 1, 5): (0, 1, 2), (1, 1, 6): (0, 1, 2), (1, 2, 2): (1, 2), (1, 2, 3): (0,),
+                                 (1, 2, 4): (0,), (1, 2, 5): (0,), (1, 2, 6): (0,), (1, 3, 3): (0,), (1, 3, 4): (0,),
+                                 (1, 3, 5): (0,), (1, 3, 6): (0,), (1, 4, 4): (0,), (1, 4, 5): (0,), (1, 4, 6): (0,),
+                                 (1, 5, 5): (0,), (1, 5, 6): (0,), (1, 6, 6): (0,), (2, 2, 2): (0, 1, 2),
+                                 (2, 2, 3): (0, 1), (2, 2, 4): (0, 1, 2), (2, 2, 5): (0, 1, 2), (2, 2, 6): (0, 1, 2),
+                                 (2, 3, 3): (0,), (2, 3, 4): (0,), (2, 3, 5): (0,), (2, 3, 6): (0,), (2, 4, 4): (0,),
+                                 (2, 4, 5): (0,), (2, 4, 6): (0,), (2, 5, 5): (0,), (2, 5, 6): (0, 1, 2),
+                                 (2, 6, 6): (0,), (3, 3, 3): (), (3, 3, 4): (), (3, 3, 5): (0, 1, 2),
+                                 (3, 3, 6): (0, 1, 2), (3, 4, 4): (), (3, 4, 5): (), (3, 4, 6): (0, 1, 2),
+                                 (3, 5, 5): (), (3, 5, 6): (0, 1, 2), (3, 6, 6): (), (4, 4, 4): (), (4, 4, 5): (),
+                                 (4, 4, 6): (), (4, 5, 5): (), (4, 5, 6): (0, 1, 2), (4, 6, 6): (), (5, 5, 5): (),
+                                 (5, 5, 6): (0, 2), (5, 6, 6): (0, 1), (6, 6, 6): ()}
+            # if score > 9:
+            #     self._best_action[state] = (0, 1, 2)
+            # else:
+            #     self._best_action[state] = ()
+            # åŠ¨ä½œçš„å¹³å‡ä»·å€¼ TODO
+            actions_val = np.zeros(len(game.actions), dtype=float)
+            # actions_val[7] = score
+            # åŠ¨ä½œçš„ç´¯è®¡æ¬¡æ•°
+            actions_num = np.zeros(len(game.actions), dtype=int)
+            # actions_num[7] = 1
+            q_arr[state] = [actions_val, actions_num]
 
-        # ================== ÑµÁ·Ä£ĞÍ ========================= #
-
-        local_cache = {}
+        # ================== è®­ç»ƒæ¨¡å‹ ========================= #
 
         delta_max = theta + 1  # initialize to be over theta treshold
-        while delta_max >= theta:
-            print(self._best_action)
-            # Ä»£¨×´Ì¬¡¢¶¯×÷ÁĞ±í£©
+        for i in range(10000):
+
+            # å¹•ï¼ˆçŠ¶æ€ã€åŠ¨ä½œåˆ—è¡¨ï¼‰
             state_list = []
             action_list = []
-            # ³õÊ¼»¯ÓÎÏ·×´Ì¬
+            # åˆå§‹åŒ–æ¸¸æˆçŠ¶æ€
             state = game.reset()
             game_over = False
-            # ¸ù¾İ²ßÂÔÉú³ÉÒ»¸öÄ»
-            while not game_over and len(action_list) <= 10:
+            # è®°å½•æœ€åä¸€å¹•çš„rewardã€‚å½“ç„¶ä¹Ÿå¯ä»¥å¼„ä¸ª reward listï¼Œä½†æ˜¯ç”±äºä¸­é—´æ­¥éª¤çš„ reward éƒ½æ˜¯ -1 ï¼Œæ‰€ä»¥åªç”¨è®°å½•æœ€åä¸€ä¸ª
+            reward = 0
+            # æ ¹æ®ç­–ç•¥ç”Ÿæˆä¸€ä¸ªå¹•
+            while not game_over:
                 action = self.play(state)
-                # TODO: ²ÎÊı»¯12
-                # len(action_list) < 12 ÊÇ¼ôÖ¦£¬ÒòÎªÖØÖÃ 12 ´ÎÒÔÉÏ»ù±¾Ã»É¶ºÃ·ÖÊıÁË¡£12 ÊÇ¸ö³¬²ÎÊı
-                if len(action_list) > 12:
+                # TODO: å‚æ•°åŒ–12
+                # å‰ªæï¼Œå› ä¸ºé‡ç½® 8 æ¬¡ä»¥ä¸ŠåŸºæœ¬æ²¡å•¥å¥½åˆ†æ•°äº†ã€‚8 æ˜¯ä¸ªè¶…å‚æ•°
+                if len(action_list) > 8:
+                    # å¼ºåˆ¶ç»“æŸæ¸¸æˆ
                     action = (0, 1, 2)
 
-                _, state, game_over = self.game.roll(action)
-                # ¼ÇÂ¼Ä»
-                action_list.append(action)
+                reward, state, game_over = self.game.roll(action)
+                # è®°å½•å¹•
                 state_list.append(state)
+                action_list.append(action)
 
-            # ¸ÃÄ»µÄµÃ·Ö
-            score = self.game.score
-
-            # ²ßÂÔÆÀ¹À
-            # Î´À´ÆÚÍûÊÕÒæ
-            reward = score
-            # ÄæĞò±éÀúÄ»
+            # ç­–ç•¥è¯„ä¼°
+            # è®¿é—®è®°å½•ã€‚åªæ›´æ–°è¯¥å¹•ä¸­é¦–æ¬¡è®¿é—®çš„çŠ¶æ€-åŠ¨ä½œ
+            visit_history = []
+            # é€†åºéå†å¹• TODO:debug
             for step in range(len(state_list) - 1, -1, -1):
-                # TODO: Ö»¸üĞÂÊ×´Î·ÃÎÊµÄ
                 state = state_list[step]
                 action = action_list[step]
-                # ¶¯×÷µÄÀÛ¼Æ´ÎÊı
+
+                # åªæ›´æ–°é¦–æ¬¡è®¿é—®
+                if (state, action) in visit_history:
+                    reward = gamma * reward - 1
+                    continue
+                visit_history.append((state, action))
+
+                # åŠ¨ä½œçš„ç´¯è®¡æ¬¡æ•°
                 q_arr[state][1][self._action_index[action]] += 1
                 num_a = q_arr[state][1][self._action_index[action]]
-                # ¶¯×÷µÄÆ½¾ù¼ÛÖµ
-                # TODO: ¿ÉÒÔÓÃ TD Ëã·¨ÓÅ»¯ https://www.cnblogs.com/xiaohuiduan/p/12977830.html
+                # åŠ¨ä½œçš„å¹³å‡ä»·å€¼
                 pre_a = q_arr[state][0][self._action_index[action]]
                 q_arr[state][0][self._action_index[action]] += (reward - q_arr[state][0][
                     self._action_index[action]]) / num_a
 
-                # ¸üĞÂÏÂÒ»¸ö×´Ì¬µÄ g
-                # TODO£º°Ñ -1 ±ä³É - self.game._penalty
+                # æ›´æ–°ä¸‹ä¸€ä¸ªçŠ¶æ€çš„æœªæ¥æœŸæœ›æ”¶ç›Š G_t
+                # TODOï¼šæŠŠ -1 å˜æˆ - self.game._penalty
                 reward = gamma * reward - 1
 
-                # ²ßÂÔ¸Ä½ø: Èç¹û action µÄÆ½¾ùÖµ±È best action ºÃ£¬¾Í×÷ÎªĞÂµÄ best action
-                if q_arr[state][0][self._action_index[action]] > q_arr[state][0][
-                    self._action_index[self._best_action[state]]]:
-                    self._best_action[state] = action
+                # ç­–ç•¥æ”¹è¿›:å–å¹³å‡å€¼æœ€å¤§çš„ action ä½œä¸º best action
+                max_index = np.argmax(q_arr[state][0])
+                self._best_action[state] = self.game.actions[max_index]
 
-                # TODO£ºÔõÃ´ÖÕÖ¹Ñ­»·ÄØ
-                # Ò»´ÎÄ»ÖĞÈç¹û×´Ì¬-¶¯×÷µÄÆ½¾ù¼ÛÖµµÄ×î´ó±ä»¯Ğ¡ÓÚtheta£¬¾ÍÖÕÖ¹Ñ­»·
+                # TODOï¼šæ€ä¹ˆç»ˆæ­¢å¾ªç¯å‘¢
+                # ä¸€æ¬¡å¹•ä¸­å¦‚æœçŠ¶æ€-åŠ¨ä½œçš„å¹³å‡ä»·å€¼çš„æœ€å¤§å˜åŒ–å°äºthetaï¼Œå°±ç»ˆæ­¢å¾ªç¯
                 delta_max = max(delta_max, abs(pre_a - q_arr[state][0][self._action_index[action]]))
+
+        # print('finish')
+        # # æ‰“å¼€æ–‡ä»¶
+        # f = open("best_action.txt", "w")
+        # # å†™å…¥åˆ—è¡¨ä¸­çš„æ¯ä¸€ä¸ªå…ƒç´ 
+        # f.write(str(self._best_action))
+        # # å…³é—­æ–‡ä»¶
+        # f.close()
+        # # æ‰“å¼€æ–‡ä»¶
+        # f = open("q_arr.txt", "w")
+        # # å†™å…¥åˆ—è¡¨ä¸­çš„æ¯ä¸€ä¸ªå…ƒç´ 
+        # f.write(str(q_arr))
+        # # å…³é—­æ–‡ä»¶
+        # f.close()
 
     def play(self, state):
         """
-        ¶¯×÷²ßÂÔº¯Êı
-        :param state: µ±Ç°×´Ì¬
-        :return: agentµÄ¶¯×÷
+        åŠ¨ä½œç­–ç•¥å‡½æ•°
+        :param state: å½“å‰çŠ¶æ€
+        :return: agentçš„åŠ¨ä½œ
         """
-        # ¶ÔÆµÂÊ½øĞĞ¼ÓÈ¨
-        # ×î¼Ñ¶¯×÷µÄ¸ÅÂÊ
-        p_best = 1 - self._epsilon * (1 - 1 / self._action_num)
-        # ÆäËû¶¯×÷µÄ¸ÅÂÊ
-        p_others = self._epsilon / self._action_num
+        best_index = self._action_index[self._best_action[state]]
+        p_array = self._init_p_array.copy()
+        p_array[best_index] = self._p_best
 
-        # TODO: ×ö»º´æ
-        # ËùÓĞ¶¯×÷µÄ¸ÅÂÊÊı×é
-        p_array = np.linspace(p_others, p_others, self._action_num, endpoint=True, dtype=float)
-        best_index = self.game.actions.index(self._best_action[state])
-        p_array[best_index] = p_best
-
-        # °´ÕÕ epsilon Ì°ĞÄ²ßÂÔÑ¡ÔñÒ»¸ö¶¯×÷
+        # æŒ‰ç…§ epsilon è´ªå¿ƒç­–ç•¥é€‰æ‹©ä¸€ä¸ªåŠ¨ä½œ
         return random.choices(self.game.actions, p_array, k=1)[0]
 
+    def update_epsilon(self, e):
+        # æ›´æ–° epsilon çš„å€¼
+        self._epsilon = e
 
-# ÓÃÀ´²âÊÔ
+        # é‡æ–°è®¡ç®—æ¦‚ç‡
+        # æœ€ä½³åŠ¨ä½œçš„æ¦‚ç‡
+        p_best = 1 - self._epsilon * (1 - 1 / self._action_num)
+        # å…¶ä»–åŠ¨ä½œçš„æ¦‚ç‡
+        p_others = self._epsilon / self._action_num
+        # åˆå§‹åŒ–åŠ¨ä½œçš„æ¦‚ç‡æ•°ç»„
+        init_p_array = np.linspace(p_others, p_others, self._action_num, endpoint=True, dtype=float)
+        # æ›´æ–°ç¼“å­˜
+        self._p_best = p_best
+        self._init_p_array = init_p_array
+
+
+# ç”¨æ¥æµ‹è¯•
 if __name__ == "__main__":
     game = DiceGame()
     agent = MyAgent(game)
-    state = game.reset()
-    action = agent.play(state)
+    # print('è®­ç»ƒå®Œæˆ')
+    # state = game.reset()
+    # action = agent.play(state)

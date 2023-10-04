@@ -6,9 +6,9 @@ import numpy as np
 from dice_game import DiceGame
 
 # 通过切换导入的 MyAgent 来完成不同策略的测试
-from agents.best_value_iteration import MyAgent
+# from agents.best_value_iteration import MyAgent
+from agents.epsilon_mc import MyAgent
 
-# from agents.epsilon_greedy import MyAgent
 
 # 是否 Debug，是就输出调试信息
 DBG = True
