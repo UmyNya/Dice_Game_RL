@@ -3,8 +3,10 @@
 """
 import numpy as np
 import random
+import time
+import matplotlib.pyplot as plt
 
-from agents.dice_game_agent import DiceGameAgent, get_next_states_cached
+from agents.dice_game_agent import DiceGameAgent, get_next_states_cached, play_game_with_agent
 from dice_game import DiceGame
 
 
@@ -13,7 +15,7 @@ class MyAgent(DiceGameAgent):
     使用ε-贪心策略实现的 agent
     """
 
-    def __init__(self, game, gamma=0.99, theta=0.5):
+    def __init__(self, game, gamma=1, epsilon=0.1, n=10000):
         """
         ε-Q 学习策略
         """
@@ -31,8 +33,8 @@ class MyAgent(DiceGameAgent):
         self._p_best = None
         self._init_p_array = None
         # ε , 试探的概率
-        self._epsilon = 0  # TODO：可以优化为缓慢下降/波动
-        self.update_epsilon(0.1)
+        self._epsilon = 0
+        self.update_epsilon(epsilon)
 
         # 当前 state 下的最佳 action = self._best_action[state]
         self._best_action = {}
@@ -42,28 +44,30 @@ class MyAgent(DiceGameAgent):
         q_arr = {}
 
         # TODO: 优化初始值
+        # DP最优
+        # self._best_action = {(1, 1, 1): (0, 1, 2), (1, 1, 2): (0, 1), (1, 1, 3): (0, 1), (1, 1, 4): (0, 1, 2),
+        #                      (1, 1, 5): (0, 1, 2), (1, 1, 6): (0, 1, 2), (1, 2, 2): (1, 2), (1, 2, 3): (0,),
+        #                      (1, 2, 4): (0,), (1, 2, 5): (0,), (1, 2, 6): (0,), (1, 3, 3): (0,), (1, 3, 4): (0,),
+        #                      (1, 3, 5): (0,), (1, 3, 6): (0,), (1, 4, 4): (0,), (1, 4, 5): (0,), (1, 4, 6): (0,),
+        #                      (1, 5, 5): (0,), (1, 5, 6): (0,), (1, 6, 6): (0,), (2, 2, 2): (0, 1, 2),
+        #                      (2, 2, 3): (0, 1), (2, 2, 4): (0, 1, 2), (2, 2, 5): (0, 1, 2), (2, 2, 6): (0, 1, 2),
+        #                      (2, 3, 3): (0,), (2, 3, 4): (0,), (2, 3, 5): (0,), (2, 3, 6): (0,), (2, 4, 4): (0,),
+        #                      (2, 4, 5): (0,), (2, 4, 6): (0,), (2, 5, 5): (0,), (2, 5, 6): (0, 1, 2),
+        #                      (2, 6, 6): (0,), (3, 3, 3): (), (3, 3, 4): (), (3, 3, 5): (0, 1, 2),
+        #                      (3, 3, 6): (0, 1, 2), (3, 4, 4): (), (3, 4, 5): (), (3, 4, 6): (0, 1, 2),
+        #                      (3, 5, 5): (), (3, 5, 6): (0, 1, 2), (3, 6, 6): (), (4, 4, 4): (), (4, 4, 5): (),
+        #                      (4, 4, 6): (), (4, 5, 5): (), (4, 5, 6): (0, 1, 2), (4, 6, 6): (), (5, 5, 5): (),
+        #                      (5, 5, 6): (0, 2), (5, 6, 6): (0, 1), (6, 6, 6): ()}
         for state in game.states:
+            # 初始化最优动作
+            self._best_action[state] = ()
             # 计算当前 state 的临时分数
-            score = self.game.get_state_score(state)
-            # 初始化最优动作 TODO
-            self._best_action = {(1, 1, 1): (0, 1, 2), (1, 1, 2): (0, 1), (1, 1, 3): (0, 1), (1, 1, 4): (0, 1, 2),
-                                 (1, 1, 5): (0, 1, 2), (1, 1, 6): (0, 1, 2), (1, 2, 2): (1, 2), (1, 2, 3): (0,),
-                                 (1, 2, 4): (0,), (1, 2, 5): (0,), (1, 2, 6): (0,), (1, 3, 3): (0,), (1, 3, 4): (0,),
-                                 (1, 3, 5): (0,), (1, 3, 6): (0,), (1, 4, 4): (0,), (1, 4, 5): (0,), (1, 4, 6): (0,),
-                                 (1, 5, 5): (0,), (1, 5, 6): (0,), (1, 6, 6): (0,), (2, 2, 2): (0, 1, 2),
-                                 (2, 2, 3): (0, 1), (2, 2, 4): (0, 1, 2), (2, 2, 5): (0, 1, 2), (2, 2, 6): (0, 1, 2),
-                                 (2, 3, 3): (0,), (2, 3, 4): (0,), (2, 3, 5): (0,), (2, 3, 6): (0,), (2, 4, 4): (0,),
-                                 (2, 4, 5): (0,), (2, 4, 6): (0,), (2, 5, 5): (0,), (2, 5, 6): (0, 1, 2),
-                                 (2, 6, 6): (0,), (3, 3, 3): (), (3, 3, 4): (), (3, 3, 5): (0, 1, 2),
-                                 (3, 3, 6): (0, 1, 2), (3, 4, 4): (), (3, 4, 5): (), (3, 4, 6): (0, 1, 2),
-                                 (3, 5, 5): (), (3, 5, 6): (0, 1, 2), (3, 6, 6): (), (4, 4, 4): (), (4, 4, 5): (),
-                                 (4, 4, 6): (), (4, 5, 5): (), (4, 5, 6): (0, 1, 2), (4, 6, 6): (), (5, 5, 5): (),
-                                 (5, 5, 6): (0, 2), (5, 6, 6): (0, 1), (6, 6, 6): ()}
+            # score = self.game.get_state_score(state)
             # if score > 9:
             #     self._best_action[state] = (0, 1, 2)
             # else:
             #     self._best_action[state] = ()
-            # 动作的平均价值 TODO
+            # 动作的平均价值
             actions_val = np.zeros(len(game.actions), dtype=float)
             # actions_val[7] = score
             # 动作的累计次数
@@ -73,9 +77,7 @@ class MyAgent(DiceGameAgent):
 
         # ================== 训练模型 ========================= #
 
-        delta_max = theta + 1  # initialize to be over theta treshold
-        for i in range(10000):
-
+        for i in range(n):
             # 幕（状态、动作列表）
             state_list = []
             action_list = []
@@ -87,8 +89,7 @@ class MyAgent(DiceGameAgent):
             # 根据策略生成一个幕
             while not game_over:
                 action = self.play(state)
-                # TODO: 参数化12
-                # 剪枝，因为重置 8 次以上基本没啥好分数了。8 是个超参数
+                # 剪枝，因为重置 8 次以上基本没啥好分数了。8 是个超参数 TODO: 参数化变量
                 if len(action_list) > 8:
                     # 强制结束游戏
                     action = (0, 1, 2)
@@ -101,7 +102,7 @@ class MyAgent(DiceGameAgent):
             # 策略评估
             # 访问记录。只更新该幕中首次访问的状态-动作
             visit_history = []
-            # 逆序遍历幕 TODO:debug
+            # 逆序遍历幕
             for step in range(len(state_list) - 1, -1, -1):
                 state = state_list[step]
                 action = action_list[step]
@@ -127,10 +128,6 @@ class MyAgent(DiceGameAgent):
                 # 策略改进:取平均值最大的 action 作为 best action
                 max_index = np.argmax(q_arr[state][0])
                 self._best_action[state] = self.game.actions[max_index]
-
-                # TODO：怎么终止循环呢
-                # 一次幕中如果状态-动作的平均价值的最大变化小于theta，就终止循环
-                delta_max = max(delta_max, abs(pre_a - q_arr[state][0][self._action_index[action]]))
 
         # print('finish')
         # # 打开文件
@@ -175,10 +172,101 @@ class MyAgent(DiceGameAgent):
         self._init_p_array = init_p_array
 
 
+def hyper_tuning():
+    """
+    超参数调试。绘制超参数相关图表。
+    超参数有：
+    - 折扣率 γ
+    - 碳酸率 ε
+    - 迭代次数 略
+    :return:
+    """
+    print("Tuning parameters gamma and theta")
+    print()
+
+    # 测试 epsilon
+    # test_n = [10000]
+    # test_gamma = [1]
+    # test_epsilon = np.arange(0, 0.5, 0.01)
+    # 测试 gamma
+    # test_n = [10000]
+    # test_gamma = np.arange(0.80, 1.005, 0.005)
+    # test_epsilon = [0.1]
+    # 测试 n
+    test_n = np.arange(1000, 51000, 1000)
+    test_gamma = [1]
+    test_epsilon = [0.1]
+
+    scores = []
+    times = []
+    for tn in test_n:
+        for g in test_gamma:
+            for e in test_epsilon:
+                total_score = 0
+                total_time = 0
+                n = 1000
+
+                np.random.seed()
+                game = DiceGame()
+
+                start_time = time.process_time()
+                test_agent = MyAgent(game, gamma=g, epsilon=e, n=tn)
+                total_time += time.process_time() - start_time
+
+                for i in range(n):
+                    start_time = time.process_time()
+                    score = play_game_with_agent(test_agent, game)
+                    total_time += time.process_time() - start_time
+                    total_score += score
+
+                scores.append(total_score / n)
+                times.append(total_time)
+
+    # for g,s,t in zip(test_gamma,scores,times):
+    # for g, s, t in zip(test_epsilon, scores, times):
+    for g, s, t in zip(test_n, scores, times):
+        print(round(g, 3), round(s, 3), round(t, 3))
+
+    print(
+        "10x20 -[gamma = {:0.3f}, epsilon = {:0.3f}] Overall AVG score {:0.3f} and AVG time {:0.3f}".format(g, e,
+                                                                                                            np.mean(
+                                                                                                                scores),
+                                                                                                            np.mean(
+                                                                                                                times)))
+    plt.plot(test_n, scores)
+    plt.xlabel('n')
+    # plt.plot(test_gamma, scores)
+    # plt.xlabel('gamma')
+    # plt.plot(test_epsilon, scores)
+    # plt.xlabel('epsilon')
+    plt.ylabel('game score')
+    plt.title('Average game score of 1000 games')
+    plt.grid(True)
+    plt.savefig("n_tunning.png")
+    # plt.savefig("gamma_tunning.png")
+    # plt.savefig("epsilon_tunning.png")
+    plt.show()
+
+    plt.plot(test_n, times)
+    plt.xlabel('n')
+    # plt.plot(test_gamma, times)
+    # plt.xlabel('gamma')
+    # plt.plot(test_epsilon, times)
+    # plt.xlabel('epsilon')
+    plt.ylabel('time')
+    plt.title('Average time to converge')
+    plt.grid(True)
+    plt.savefig("n_tunning_times.png")
+    # plt.savefig("gamma_tunning_times.png")
+    # plt.savefig("epsilon_tunning_times.png")
+    plt.show()
+
+
 # 用来测试
 if __name__ == "__main__":
-    game = DiceGame()
-    agent = MyAgent(game)
+    # game = DiceGame()
+    # agent = MyAgent(game)
     # print('训练完成')
     # state = game.reset()
     # action = agent.play(state)
+    hyper_tuning()
