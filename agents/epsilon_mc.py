@@ -17,7 +17,7 @@ class MyAgent(DiceGameAgent):
 
     def __init__(self, game, gamma=1, epsilon=0.1, n=10000):
         """
-        ε-Q 学习策略
+        基于 ε 策略的的首次访问型 MC 控制算法
         """
         # this calls the superclass constructor (does self.game = game)
         super().__init__(game)
